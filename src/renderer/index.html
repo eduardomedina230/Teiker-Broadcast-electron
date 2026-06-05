@@ -1,0 +1,295 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <title>Teiker Broadcast</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body class="mode-pill theme-glass">
+    <div id="bootSkeleton" class="boot-skeleton" aria-hidden="true">
+      <div class="skeleton-bar"></div>
+      <div class="skeleton-bar short"></div>
+    </div>
+    <div id="confettiRoot" class="confetti-root" aria-hidden="true"></div>
+    <div id="toastRoot" class="toast-root" role="status" aria-live="polite"></div>
+    <!-- ========================  PILL  ======================== -->
+    <div class="pill-app">
+      <div class="pill" id="pillCard">
+        <span id="pillBrand"></span>
+        <div class="pill-dot" id="pillDot" style="display:none"></div>
+        <div class="pill-label" id="pillLabel">TEIKER</div>
+        <div class="pill-badge" id="pillBadge" style="display:none">0</div>
+        <button class="pill-expand icon-slot" id="pillExpand" data-icon="expand" title="Abrir"></button>
+      </div>
+    </div>
+
+    <!-- ========================  MINI  ======================== -->
+    <div class="mini-app">
+      <div class="mini-card" id="miniCard">
+        <div class="glass-overlay"></div>
+        <div class="mini-header">
+          <div class="mini-brand">
+            <span id="miniBrand"></span>
+            <span class="brand-dot" id="miniStatusDot"></span>
+            <span id="miniUserName">Teiker</span>
+          </div>
+          <div class="mini-actions">
+            <button class="icon-btn icon-slot" id="shrinkBtn" data-icon="chevUp" title="Pastilla"></button>
+            <button class="icon-btn icon-slot" id="expandBtn" data-icon="expand" title="Expandir"></button>
+            <button class="icon-btn icon-slot" id="miniCloseBtn" data-icon="close" title="Ocultar"></button>
+          </div>
+        </div>
+        <div class="mini-pager" id="miniPager" style="display:none">
+          <button class="pager-btn icon-slot" id="pagerPrev" data-icon="chevLeft" title="Anterior"></button>
+          <span class="pager-label" id="pagerLabel">1 de 1</span>
+          <button class="pager-btn icon-slot" id="pagerNext" data-icon="chevRight" title="Siguiente"></button>
+        </div>
+        <div class="mini-body" id="miniBody">
+          <div class="mini-empty">Cargando…</div>
+        </div>
+        <div class="mini-goal-strip" id="miniGoalStrip" style="display:none"></div>
+      </div>
+    </div>
+
+    <!-- ========================  FULL  ======================== -->
+    <div class="app">
+      <div class="glass-overlay"></div>
+      <div class="titlebar">
+        <div class="brand">
+          <span id="fullBrand"></span>
+          <span class="brand-dot" id="statusDot"></span>
+          <span class="brand-name">Teiker Broadcast</span>
+          <span class="user-tag" id="fullUserName"></span>
+        </div>
+        <div class="actions">
+          <button class="icon-btn icon-slot" id="settingsBtn" data-icon="settings" title="Configuración"></button>
+          <button class="icon-btn icon-slot" id="shrinkFullBtn" data-icon="chevUp" title="Pastilla"></button>
+          <button class="icon-btn icon-slot" id="collapseBtn" data-icon="collapse" title="Minimizar"></button>
+          <button class="icon-btn icon-slot" id="refreshBtn" data-icon="refresh" title="Actualizar"></button>
+          <button class="icon-btn icon-slot" id="closeBtn" data-icon="close" title="Cerrar"></button>
+        </div>
+      </div>
+
+      <div class="scroll" id="mainScroll">
+        <section class="section" id="pendingSection" style="display:none">
+          <div class="section-title">
+            <span>Pendientes de confirmar</span>
+            <span class="count" id="pendingCount">0</span>
+          </div>
+          <div id="pendingList"></div>
+        </section>
+
+        <section class="section">
+          <div class="section-title">
+            <span>Meta del día</span>
+          </div>
+          <div id="goals"></div>
+        </section>
+
+        <section class="section" id="recentSection">
+          <div class="section-title">
+            <span>Mensajes recientes</span>
+            <span class="count" id="messageCount">0</span>
+          </div>
+          <div class="section-divider" id="feedDivider" style="display:none"></div>
+          <div id="messages"></div>
+          <button class="ghost-btn history-toggle" id="historyToggle" style="display:none">
+            Ver historial completo
+          </button>
+          <div id="messageHistory" style="display:none"></div>
+        </section>
+      </div>
+
+      <div class="scroll" id="settingsScroll" style="display:none">
+        <section class="section">
+          <div class="settings-back-row">
+            <button class="back-btn icon-slot" id="settingsBack" data-icon="chevLeft"> Volver</button>
+          </div>
+          <h2 class="settings-title">Configuración</h2>
+
+          <div class="settings-group">
+            <div class="settings-label">Apariencia</div>
+            <div class="theme-options">
+              <button class="theme-card" data-theme="glass" id="themeGlass">
+                <div class="theme-preview preview-glass">
+                  <div class="preview-line w-60"></div>
+                  <div class="preview-line w-40"></div>
+                </div>
+                <div class="theme-name">Liquid glass</div>
+                <div class="theme-desc">Oscuro con brillo sutil</div>
+              </button>
+              <button class="theme-card" data-theme="solid" id="themeSolid">
+                <div class="theme-preview preview-solid">
+                  <div class="preview-line w-60"></div>
+                  <div class="preview-line w-40"></div>
+                </div>
+                <div class="theme-name">Negro sólido</div>
+                <div class="theme-desc">Fondo opaco, máxima legibilidad</div>
+              </button>
+            </div>
+          </div>
+
+          <div class="settings-group">
+            <div class="settings-label">Identidad</div>
+            <div class="settings-row">
+              <div class="settings-row-info">
+                <div class="settings-row-title" id="settingsUserName">—</div>
+                <div class="settings-row-sub" id="settingsHostname">—</div>
+              </div>
+              <button class="ghost-btn" id="resetUserBtn">Cambiar usuario</button>
+            </div>
+          </div>
+
+          <div class="settings-group">
+            <div class="settings-label">Notificaciones</div>
+            <div class="settings-row">
+              <span class="settings-icon" data-icon="bell"></span>
+              <div class="settings-row-info">
+                <div class="settings-row-title">Sonido</div>
+                <div class="settings-row-sub">Reproduce un tono al recibir avisos</div>
+              </div>
+              <label class="toggle">
+                <input type="checkbox" id="settingSound" />
+                <span class="toggle-track"></span>
+              </label>
+            </div>
+            <div class="settings-row">
+              <span class="settings-icon" data-icon="moon"></span>
+              <div class="settings-row-info">
+                <div class="settings-row-title">No molestar</div>
+                <div class="settings-row-sub">Silencia notificaciones en un horario</div>
+              </div>
+              <label class="toggle">
+                <input type="checkbox" id="settingDnd" />
+                <span class="toggle-track"></span>
+              </label>
+            </div>
+            <div class="settings-row settings-row-stack" id="dndScheduleRow" style="display:none">
+              <div class="settings-row-info">
+                <div class="settings-row-title">Horario</div>
+                <div class="settings-row-sub">De noche a mañana también funciona (ej. 22:00 → 08:00)</div>
+              </div>
+              <div class="time-range">
+                <input type="time" id="settingDndStart" class="time-input" />
+                <span class="time-sep">→</span>
+                <input type="time" id="settingDndEnd" class="time-input" />
+              </div>
+            </div>
+          </div>
+
+          <div class="settings-group">
+            <div class="settings-label">Conexión</div>
+            <div class="settings-row settings-row-stack">
+              <span class="settings-icon" data-icon="link"></span>
+              <div class="settings-row-info">
+                <div class="settings-row-title">Servidor backend</div>
+                <div class="settings-row-sub">URL del panel web (se aplica al guardar)</div>
+              </div>
+              <input type="url" id="settingBackendUrl" class="text-input" placeholder="https://broadcast.teiker.mx" />
+            </div>
+          </div>
+
+          <div class="settings-group">
+            <div class="settings-label">Atajos</div>
+            <div class="settings-row">
+              <span class="settings-icon" data-icon="keyboard"></span>
+              <div class="settings-row-info">
+                <div class="settings-row-title">Mostrar / ocultar</div>
+                <div class="settings-row-sub" id="shortcutToggle">⌘⇧T</div>
+              </div>
+            </div>
+            <div class="settings-row">
+              <span class="settings-icon" data-icon="keyboard"></span>
+              <div class="settings-row-info">
+                <div class="settings-row-title">Confirmar primer pendiente</div>
+                <div class="settings-row-sub" id="shortcutAck">⌘⇧A</div>
+              </div>
+            </div>
+            <div class="settings-row">
+              <span class="settings-icon" data-icon="keyboard"></span>
+              <div class="settings-row-info">
+                <div class="settings-row-title">Sumar +1 a la meta</div>
+                <div class="settings-row-sub" id="shortcutGoal">⌘⇧G</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="settings-group">
+            <div class="settings-label">Enfoque</div>
+            <div class="settings-row">
+              <span class="settings-icon" data-icon="moon"></span>
+              <div class="settings-row-info">
+                <div class="settings-row-title">Modo reunión</div>
+                <div class="settings-row-sub">Pastilla mínima, sin sonido ni notificaciones</div>
+              </div>
+              <label class="toggle">
+                <input type="checkbox" id="settingMeeting" />
+                <span class="toggle-track"></span>
+              </label>
+            </div>
+            <div class="settings-row">
+              <span class="settings-icon" data-icon="bell"></span>
+              <div class="settings-row-info">
+                <div class="settings-row-title">Silenciar 1 hora</div>
+                <div class="settings-row-sub">Pausa avisos sin cambiar el horario DND</div>
+              </div>
+              <button class="ghost-btn" id="quietHourBtn">Activar</button>
+            </div>
+          </div>
+
+          <div class="settings-group">
+            <div class="settings-label">Sistema</div>
+            <div class="settings-row">
+              <span class="settings-icon" data-icon="power"></span>
+              <div class="settings-row-info">
+                <div class="settings-row-title">Iniciar al encender</div>
+                <div class="settings-row-sub" id="settingsLaunchAtLogin">—</div>
+              </div>
+              <label class="toggle">
+                <input type="checkbox" id="settingLaunchAtLogin" />
+                <span class="toggle-track"></span>
+              </label>
+            </div>
+            <div class="settings-row">
+              <span class="settings-icon" data-icon="external"></span>
+              <div class="settings-row-info">
+                <div class="settings-row-title">Panel de administración</div>
+                <div class="settings-row-sub">Abre el panel web en el navegador</div>
+              </div>
+              <button class="ghost-btn" id="openAdminBtn">Abrir</button>
+            </div>
+            <div class="settings-row">
+              <span class="settings-icon" data-icon="refresh"></span>
+              <div class="settings-row-info">
+                <div class="settings-row-title">Actualizaciones</div>
+                <div class="settings-row-sub" id="settingsUpdater">—</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="settings-group">
+            <div class="settings-label">Acerca de</div>
+            <div class="settings-row">
+              <span id="settingsBrand"></span>
+              <div class="settings-row-info">
+                <div class="settings-row-title">Teiker Broadcast</div>
+                <div class="settings-row-sub" id="settingsBackend">—</div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <div class="footer">
+        <div class="left">
+          <span class="status-dot" id="footerDot"></span>
+          <span id="syncLabel">Conectando...</span>
+        </div>
+        <button class="refresh-btn" id="refreshFooter">Actualizar</button>
+      </div>
+    </div>
+
+    <script src="icons.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>

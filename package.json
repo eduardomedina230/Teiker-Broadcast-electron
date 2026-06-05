@@ -1,0 +1,31 @@
+{
+  "name": "teiker-broadcast",
+  "version": "1.0.1",
+  "description": "Teiker Broadcast — desktop tray client",
+  "main": "src/main.js",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/eduardomedina230/Teiker-Broadcast-electron.git"
+  },
+  "homepage": "https://github.com/eduardomedina230/Teiker-Broadcast-electron",
+  "scripts": {
+    "dev": "electron .",
+    "start": "electron .",
+    "build": "electron-builder",
+    "build:mac": "electron-builder --mac",
+    "build:win": "electron-builder --win",
+    "build:win:publish": "electron-builder --win --publish always"
+  },
+  "type": "commonjs",
+  "author": "Teiker",
+  "license": "UNLICENSED",
+  "dependencies": {
+    "dotenv": "^17.4.2",
+    "electron-store": "^11.0.2",
+    "electron-updater": "^6.8.3"
+  },
+  "devDependencies": {
+    "electron": "^42.3.3",
+    "electron-builder": "^26.8.1"
+  }
+}

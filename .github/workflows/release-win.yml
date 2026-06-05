@@ -1,0 +1,33 @@
+name: Release Windows
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - name: Bundle production env
+        shell: bash
+        run: |
+          echo "BACKEND_URL=${{ secrets.BACKEND_URL }}" > .env
+          echo "REGISTER_SECRET=${{ secrets.REGISTER_SECRET }}" >> .env
+
+      - name: Build and publish to GitHub Releases
+        run: npm run build:win:publish
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
