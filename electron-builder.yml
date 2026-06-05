@@ -22,6 +22,7 @@ publish:
   provider: github
   owner: eduardomedina230
   repo: Teiker-Broadcast-electron
+  releaseType: release
 
 mac:
   category: public.app-category.utilities
@@ -41,6 +42,7 @@ mac:
   identity: null
 
 win:
+  verifyUpdateCodeSignature: false
   target:
     - target: nsis
       arch:

@@ -264,6 +264,15 @@ button.icon-btn:hover {
   border-color: transparent;
 }
 
+button.ghost-btn.success {
+  background: rgba(16, 185, 129, 0.18);
+  border-color: rgba(16, 185, 129, 0.35);
+  color: #6ee7b7;
+}
+button.ghost-btn.success:hover {
+  background: rgba(16, 185, 129, 0.28);
+}
+
 button.ghost-btn {
   background: transparent;
   border: 0.5px solid var(--btn-border);

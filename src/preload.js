@@ -84,4 +84,12 @@ contextBridge.exposeInMainWorld('api', {
   getSettings: () => ipcRenderer.invoke('settings:get'),
   setSetting: (key, value) => ipcRenderer.invoke('settings:set', { key, value }),
   openAdminPanel: () => ipcRenderer.invoke('app:open-admin'),
+  checkForUpdates: () => ipcRenderer.invoke('app:check-updates'),
+  installUpdate: () => ipcRenderer.invoke('app:install-update'),
+  getUpdateInfo: () => ipcRenderer.invoke('app:update-info'),
+  onUpdateStatus: (cb) => {
+    const listener = (_e, status) => cb(status)
+    ipcRenderer.on('update:status', listener)
+    return () => ipcRenderer.removeListener('update:status', listener)
+  },
 })

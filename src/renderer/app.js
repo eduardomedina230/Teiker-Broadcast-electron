@@ -45,6 +45,7 @@ const $settingsHostname = document.getElementById('settingsHostname')
 const $settingsBackend = document.getElementById('settingsBackend')
 const $settingsLaunchAtLogin = document.getElementById('settingsLaunchAtLogin')
 const $settingsUpdater = document.getElementById('settingsUpdater')
+const $checkUpdateBtn = document.getElementById('checkUpdateBtn')
 const $resetUserBtn = document.getElementById('resetUserBtn')
 const $settingSound = document.getElementById('settingSound')
 const $settingDnd = document.getElementById('settingDnd')
@@ -198,6 +199,90 @@ $settingLaunchAtLogin.addEventListener('change', async () => {
 
 $openAdminBtn.addEventListener('click', () => window.api.openAdminPanel())
 
+let updateUiState = 'idle'
+
+function renderUpdateStatus(status) {
+  if (!$settingsUpdater || !$checkUpdateBtn) return
+  const s = status?.state || updateUiState
+  updateUiState = s
+  const cur = status?.current || null
+
+  switch (s) {
+    case 'checking':
+      $settingsUpdater.textContent = 'Buscando actualización…'
+      $checkUpdateBtn.disabled = true
+      $checkUpdateBtn.textContent = 'Buscando…'
+      $checkUpdateBtn.classList.remove('success')
+      break
+    case 'available':
+      $settingsUpdater.textContent = status?.version
+        ? `Nueva v${status.version} — descargando…`
+        : 'Nueva versión — descargando…'
+      $checkUpdateBtn.disabled = true
+      $checkUpdateBtn.textContent = 'Descargando…'
+      break
+    case 'downloading':
+      $settingsUpdater.textContent = `Descargando… ${status?.percent ?? 0}%`
+      $checkUpdateBtn.disabled = true
+      $checkUpdateBtn.textContent = 'Descargando…'
+      break
+    case 'ready':
+      $settingsUpdater.textContent = status?.version
+        ? `v${status.version} lista — reinicia para instalar`
+        : 'Actualización lista — reinicia para instalar'
+      $checkUpdateBtn.disabled = false
+      $checkUpdateBtn.textContent = 'Reiniciar e instalar'
+      $checkUpdateBtn.classList.add('success')
+      break
+    case 'uptodate':
+      $settingsUpdater.textContent = cur
+        ? `Instalada: v${cur} — ya es la última`
+        : 'Ya tienes la última versión'
+      $checkUpdateBtn.disabled = false
+      $checkUpdateBtn.textContent = 'Buscar actualización'
+      $checkUpdateBtn.classList.remove('success')
+      break
+    case 'error':
+      $settingsUpdater.textContent = status?.message || 'Error al comprobar — revisa internet'
+      $checkUpdateBtn.disabled = false
+      $checkUpdateBtn.textContent = 'Reintentar'
+      $checkUpdateBtn.classList.remove('success')
+      break
+    default:
+      break
+  }
+}
+
+async function initUpdateSettings(info) {
+  if (!info?.isPackaged) {
+    $settingsUpdater.textContent = 'Solo en la app instalada (.exe)'
+    if ($checkUpdateBtn) $checkUpdateBtn.disabled = true
+    return
+  }
+  const upd = await window.api.getUpdateInfo()
+  const ver = upd?.version || info?.version || '—'
+  $settingsUpdater.textContent = `Instalada: v${ver} — busca o espera auto-actualización`
+  if ($checkUpdateBtn) $checkUpdateBtn.disabled = false
+  if (upd?.pendingVersion) {
+    renderUpdateStatus({ state: 'ready', version: upd.pendingVersion })
+  }
+}
+
+$checkUpdateBtn?.addEventListener('click', async () => {
+  if (updateUiState === 'ready') {
+    await window.api.installUpdate()
+    return
+  }
+  const res = await window.api.checkForUpdates()
+  if (res?.reason === 'dev') {
+    $settingsUpdater.textContent = 'Solo en la app instalada (.exe)'
+  } else if (res?.reason === 'busy') {
+    showToast('Ya hay una búsqueda en curso')
+  }
+})
+
+window.api.onUpdateStatus?.((status) => renderUpdateStatus(status))
+
 $settingMeeting?.addEventListener('change', async () => {
   meetingMode = $settingMeeting.checked
   document.body.classList.toggle('meeting-mode', meetingMode)
@@ -259,13 +344,7 @@ function applySettingsFromInfo(info, settings) {
     meetingMode = $settingMeeting.checked
     document.body.classList.toggle('meeting-mode', meetingMode)
   }
-  if (info?.isPackaged) {
-    $settingsUpdater.textContent = 'Automáticas al reiniciar (electron-updater)'
-  } else if (info?.platform === 'win32') {
-    $settingsUpdater.textContent = 'Solo en la app instalada (.exe)'
-  } else {
-    $settingsUpdater.textContent = 'Solo en la app instalada (.dmg / .pkg)'
-  }
+  initUpdateSettings(info)
 }
 
 function openSettings() {

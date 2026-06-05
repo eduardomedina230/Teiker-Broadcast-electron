@@ -131,7 +131,9 @@ let fullIdleTimer = null
 let lastFullActivityAt = 0
 let urgentRenotifyTimer = null
 let autoUpdaterRef = null
-const UPDATE_CHECK_MS = 60 * 60_000
+let updateCheckInFlight = false
+let pendingUpdateVersion = null
+const UPDATE_CHECK_MS = 30 * 60_000
 let syncCache = {
   messages: [],
   goals: [],
@@ -1121,8 +1123,80 @@ function registerGlobalShortcuts() {
   }
 }
 
+function pushUpdateStatus(payload) {
+  pushToRenderer('update:status', payload)
+}
+
+function notifyUpdateReady(info) {
+  const ver = info?.version ? `v${info.version}` : 'nueva'
+  pendingUpdateVersion = info?.version || null
+  pushUpdateStatus({ state: 'ready', version: info?.version || null })
+  const n = new Notification({
+    title: 'Actualización lista',
+    body: `${ver} — clic aquí para reiniciar e instalar ahora.`,
+  })
+  n.on('click', () => {
+    try {
+      autoUpdaterRef?.quitAndInstall(false, true)
+    } catch (err) {
+      console.error('quitAndInstall:', err)
+    }
+  })
+  n.show()
+  pushToRenderer('toast:show', {
+    message: `Actualización ${ver} lista. Clic en la notificación para reiniciar.`,
+    ms: 10_000,
+  })
+}
+
+function wireAutoUpdaterEvents(autoUpdater) {
+  autoUpdater.on('checking-for-update', () => {
+    pushUpdateStatus({ state: 'checking' })
+  })
+  autoUpdater.on('update-available', (info) => {
+    pendingUpdateVersion = info?.version || null
+    pushUpdateStatus({ state: 'available', version: info?.version || null })
+  })
+  autoUpdater.on('update-not-available', (info) => {
+    updateCheckInFlight = false
+    pushUpdateStatus({
+      state: 'uptodate',
+      version: info?.version || app.getVersion(),
+      current: app.getVersion(),
+    })
+  })
+  autoUpdater.on('download-progress', (progress) => {
+    pushUpdateStatus({
+      state: 'downloading',
+      percent: Math.round(progress?.percent || 0),
+      version: pendingUpdateVersion,
+    })
+  })
+  autoUpdater.on('update-downloaded', (info) => {
+    updateCheckInFlight = false
+    notifyUpdateReady(info)
+  })
+  autoUpdater.on('error', (err) => {
+    updateCheckInFlight = false
+    console.error('Auto-updater error:', err)
+    pushUpdateStatus({
+      state: 'error',
+      message: err?.message || 'No se pudo comprobar actualizaciones',
+    })
+  })
+}
+
 function checkForAppUpdates() {
-  autoUpdaterRef?.checkForUpdatesAndNotify().catch(() => {})
+  if (!autoUpdaterRef || updateCheckInFlight) return
+  updateCheckInFlight = true
+  autoUpdaterRef.checkForUpdates().catch((err) => {
+    updateCheckInFlight = false
+    console.error('checkForUpdates:', err)
+    pushUpdateStatus({
+      state: 'error',
+      message: err?.message || 'No se pudo comprobar actualizaciones',
+    })
+  })
 }
 
 function setupAutoUpdater() {
@@ -1132,25 +1206,11 @@ function setupAutoUpdater() {
     autoUpdaterRef = autoUpdater
     autoUpdater.autoDownload = true
     autoUpdater.autoInstallOnAppQuit = true
-    autoUpdater.on('update-downloaded', (info) => {
-      const ver = info?.version ? `v${info.version}` : 'nueva'
-      const n = new Notification({
-        title: 'Actualización lista',
-        body: `${ver} — clic aquí para reiniciar e instalar ahora.`,
-      })
-      n.on('click', () => {
-        try {
-          autoUpdater.quitAndInstall(false, true)
-        } catch (err) {
-          console.error('quitAndInstall:', err)
-        }
-      })
-      n.show()
-      pushToRenderer('toast:show', {
-        message: `Actualización ${ver} lista. Clic en la notificación para reiniciar.`,
-        ms: 10_000,
-      })
-    })
+    // Sin certificado de firma Windows el updater falla si esto queda en true.
+    if (process.platform === 'win32') {
+      autoUpdater.verifyUpdateCodeSignature = false
+    }
+    wireAutoUpdaterEvents(autoUpdater)
     checkForAppUpdates()
     setInterval(checkForAppUpdates, UPDATE_CHECK_MS)
   } catch (err) {
@@ -1370,6 +1430,42 @@ ipcMain.handle('app:open-admin', () => {
   if (url) shell.openExternal(url)
   return url
 })
+
+ipcMain.handle('app:check-updates', async () => {
+  if (!app.isPackaged) return { ok: false, reason: 'dev' }
+  if (!autoUpdaterRef) return { ok: false, reason: 'unavailable' }
+  if (updateCheckInFlight) return { ok: false, reason: 'busy' }
+  updateCheckInFlight = true
+  pushUpdateStatus({ state: 'checking' })
+  try {
+    await autoUpdaterRef.checkForUpdates()
+    return { ok: true }
+  } catch (err) {
+    updateCheckInFlight = false
+    pushUpdateStatus({
+      state: 'error',
+      message: err?.message || 'No se pudo comprobar',
+    })
+    return { ok: false, reason: err?.message || 'error' }
+  }
+})
+
+ipcMain.handle('app:install-update', () => {
+  if (!autoUpdaterRef || !pendingUpdateVersion) return { ok: false }
+  try {
+    autoUpdaterRef.quitAndInstall(false, true)
+    return { ok: true }
+  } catch (err) {
+    return { ok: false, reason: err?.message }
+  }
+})
+
+ipcMain.handle('app:update-info', () => ({
+  packaged: app.isPackaged,
+  version: app.getVersion(),
+  pendingVersion: pendingUpdateVersion,
+}))
+
 ipcMain.handle('mode:get', () => store.get('mode') || 'pill')
 ipcMain.handle('mode:set', (_evt, mode) => {
   setWindowMode(mode)
