@@ -2,8 +2,15 @@ name: Release Windows
 
 on:
   push:
-    tags:
-      - 'v*'
+    branches:
+      - main
+    paths:
+      - package.json
+  workflow_dispatch:
+
+concurrency:
+  group: release-win
+  cancel-in-progress: true
 
 permissions:
   contents: write
@@ -19,15 +26,39 @@ jobs:
           node-version: 20
           cache: npm
 
+      - name: Versión a publicar
+        id: meta
+        shell: bash
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Publicar v$VERSION si aún no existe en Releases"
+
+      - name: ¿Release ya publicado?
+        id: gate
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if gh release view "v${{ steps.meta.outputs.version }}" >/dev/null 2>&1; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "Release v${{ steps.meta.outputs.version }} ya existe — omitiendo build."
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - run: npm ci
+        if: steps.gate.outputs.skip != 'true'
 
       - name: Bundle production env
+        if: steps.gate.outputs.skip != 'true'
         shell: bash
         run: |
           echo "BACKEND_URL=${{ secrets.BACKEND_URL }}" > .env
           echo "REGISTER_SECRET=${{ secrets.REGISTER_SECRET }}" >> .env
 
       - name: Build and publish to GitHub Releases
+        if: steps.gate.outputs.skip != 'true'
         run: npm run build:win:publish
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

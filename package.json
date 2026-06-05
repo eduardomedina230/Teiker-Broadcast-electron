@@ -14,7 +14,9 @@
     "build": "electron-builder",
     "build:mac": "electron-builder --mac",
     "build:win": "electron-builder --win",
-    "build:win:publish": "electron-builder --win --publish always"
+    "build:win:publish": "electron-builder --win --publish always",
+    "release": "node scripts/release.js",
+    "release:push": "node scripts/release.js --push"
   },
   "type": "commonjs",
   "author": "Teiker",

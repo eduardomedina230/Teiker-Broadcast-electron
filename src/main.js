@@ -124,6 +124,8 @@ let syncInFlight = false
 let fullIdleTimer = null
 let lastFullActivityAt = 0
 let urgentRenotifyTimer = null
+let autoUpdaterRef = null
+const UPDATE_CHECK_MS = 60 * 60_000
 let syncCache = {
   messages: [],
   goals: [],
@@ -1098,21 +1100,38 @@ function registerGlobalShortcuts() {
   })
 }
 
+function checkForAppUpdates() {
+  autoUpdaterRef?.checkForUpdatesAndNotify().catch(() => {})
+}
+
 function setupAutoUpdater() {
   if (!app.isPackaged) return
   try {
     const { autoUpdater } = require('electron-updater')
+    autoUpdaterRef = autoUpdater
     autoUpdater.autoDownload = true
     autoUpdater.autoInstallOnAppQuit = true
-    autoUpdater.on('update-downloaded', () => {
+    autoUpdater.on('update-downloaded', (info) => {
+      const ver = info?.version ? `v${info.version}` : 'nueva'
       const n = new Notification({
         title: 'Actualización lista',
-        body: 'Teiker Broadcast se actualizará al reiniciar.',
+        body: `${ver} — clic aquí para reiniciar e instalar ahora.`,
+      })
+      n.on('click', () => {
+        try {
+          autoUpdater.quitAndInstall(false, true)
+        } catch (err) {
+          console.error('quitAndInstall:', err)
+        }
       })
       n.show()
+      pushToRenderer('toast:show', {
+        message: `Actualización ${ver} lista. Clic en la notificación para reiniciar.`,
+        ms: 10_000,
+      })
     })
-    autoUpdater.checkForUpdatesAndNotify().catch(() => {})
-    setInterval(() => autoUpdater.checkForUpdatesAndNotify().catch(() => {}), 6 * 60 * 60 * 1000)
+    checkForAppUpdates()
+    setInterval(checkForAppUpdates, UPDATE_CHECK_MS)
   } catch (err) {
     console.error('Auto-updater no disponible:', err)
   }
@@ -1366,6 +1385,7 @@ app.whenReady().then(() => {
   powerMonitor.on('resume', () => {
     syncAll({ force: true }).catch(console.error)
     scheduleNextPoll()
+    checkForAppUpdates()
   })
   powerMonitor.on('suspend', () => {
     if (pollTimer) clearTimeout(pollTimer)

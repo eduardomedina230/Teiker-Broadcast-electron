@@ -9,32 +9,68 @@ npm install
 npm start
 ```
 
-Copia `.env.example` a `.env` (o usa el `.env` local) con `BACKEND_URL` y `REGISTER_SECRET`.
+Copia `.env.example` a `.env` con `BACKEND_URL` y `REGISTER_SECRET`.
 
-## Publicar versión nueva (Windows)
+## Publicar versión nueva (automático)
 
-### Automático (recomendado)
+### Un solo comando
 
-1. Sube la versión en `package.json` (ej. `1.0.2`).
-2. En GitHub → **Settings → Secrets → Actions**, configura:
-   - `BACKEND_URL` — URL del panel (ej. `https://teiker-broadcast-web.vercel.app`)
-   - `REGISTER_SECRET` — mismo valor que en el panel
-3. Crea y sube un tag:
+Después de commitear tus cambios de código:
 
 ```bash
-git tag v1.0.2
-git push origin main --tags
+npm run release:push
 ```
 
-El workflow `.github/workflows/release-win.yml` compila en Windows y publica el Release.
+Eso hace:
+1. Sube el patch en `package.json` (1.0.1 → 1.0.2)
+2. Commitea y pushea a `main`
+3. **GitHub Actions** compila en Windows y publica el Release
 
-### Manual desde Mac
+Bump **minor** (1.0.x → 1.1.0):
 
 ```bash
-export GH_TOKEN=tu_token_github_con_permiso_repo
-npm run build:win:publish
+npm run release -- minor --push
 ```
 
-## Auto-actualización
+Desde la raíz del monorepo:
 
-Las apps empaquetadas revisan [GitHub Releases](https://github.com/eduardomedina230/Teiker-Broadcast-electron/releases) al iniciar y cada 6 horas. La primera instalación en cada PC sigue siendo manual con el `.exe` del Release.
+```bash
+npm run release:electron:push
+```
+
+### Sin push (revisar antes)
+
+```bash
+npm run release        # solo bump + commit local
+npm run release:push   # cuando estés listo
+```
+
+### Botón manual en GitHub
+
+**Actions → Release Windows → Run workflow** (usa la versión actual de `package.json` en `main`).
+
+### Secrets requeridos (una vez)
+
+En **Settings → Secrets → Actions** del repo:
+
+| Secret | Valor |
+|--------|--------|
+| `BACKEND_URL` | `https://teiker-broadcast-web.vercel.app` |
+| `REGISTER_SECRET` | mismo que en producción |
+
+## Auto-actualización en cada PC
+
+Las apps instaladas:
+- Buscan updates al **abrir**, al **despertar el PC** y cada **1 hora**
+- **Descargan** el `.exe` en segundo plano
+- Muestran notificación — **clic = reinicia e instala** (o al cerrar la app)
+
+La **primera instalación** en cada PC sigue siendo manual con el `.exe` del [Release](https://github.com/eduardomedina230/Teiker-Broadcast-electron/releases).
+
+## Qué se actualiza solo vs qué no
+
+| Cambio | ¿Llega solo a todos? |
+|--------|----------------------|
+| `web/` (API, panel admin) | **Sí** — push a Vercel |
+| `electron/src/` (pastilla, UI) | **Sí** — tras `npm run release:push` y que cada PC actualice |
+| Solo código sin `release:push` | **No** — falta nueva versión en Releases |
