@@ -38,8 +38,8 @@ const $settingsBtn = document.getElementById('settingsBtn')
 const $settingsBack = document.getElementById('settingsBack')
 const $mainScroll = document.getElementById('mainScroll')
 const $settingsScroll = document.getElementById('settingsScroll')
-const $themeGlass = document.getElementById('themeGlass')
-const $themeSolid = document.getElementById('themeSolid')
+const $themeOptions = document.querySelector('.theme-options')
+const THEMES = ['glass', 'solid', 'orange']
 const $settingsUserName = document.getElementById('settingsUserName')
 const $settingsHostname = document.getElementById('settingsHostname')
 const $settingsBackend = document.getElementById('settingsBackend')
@@ -154,8 +154,11 @@ $pillExpand.addEventListener('click', (e) => {
 
 $settingsBtn.addEventListener('click', () => openSettings())
 $settingsBack.addEventListener('click', () => closeSettings())
-$themeGlass.addEventListener('click', () => applyTheme('glass', true))
-$themeSolid.addEventListener('click', () => applyTheme('solid', true))
+$themeOptions?.addEventListener('click', (e) => {
+  const card = e.target.closest('.theme-card')
+  const theme = card?.getAttribute('data-theme')
+  if (theme && THEMES.includes(theme)) applyTheme(theme, true)
+})
 $resetUserBtn.addEventListener('click', async () => {
   if (confirm('¿Cambiar usuario? Tendrás que volver a registrar este equipo.')) {
     await window.api.resetUser()
@@ -275,11 +278,12 @@ function closeSettings() {
 }
 
 async function applyTheme(theme, persist) {
+  if (!THEMES.includes(theme)) theme = 'glass'
   currentTheme = theme
-  document.body.classList.toggle('theme-glass', theme === 'glass')
-  document.body.classList.toggle('theme-solid', theme === 'solid')
-  $themeGlass.classList.toggle('active', theme === 'glass')
-  $themeSolid.classList.toggle('active', theme === 'solid')
+  THEMES.forEach((t) => document.body.classList.toggle(`theme-${t}`, theme === t))
+  document.querySelectorAll('.theme-card').forEach((card) => {
+    card.classList.toggle('active', card.getAttribute('data-theme') === theme)
+  })
   if (persist) await window.api.setTheme(theme)
 }
 

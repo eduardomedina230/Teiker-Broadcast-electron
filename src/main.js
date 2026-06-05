@@ -1355,9 +1355,11 @@ ipcMain.handle('mode:set', (_evt, mode) => {
   return mode
 })
 
+const VALID_THEMES = new Set(['glass', 'solid', 'orange'])
+
 ipcMain.handle('theme:get', () => store.get('theme') || 'glass')
 ipcMain.handle('theme:set', (_evt, theme) => {
-  if (theme !== 'glass' && theme !== 'solid') return
+  if (!VALID_THEMES.has(theme)) return store.get('theme')
   store.set('theme', theme)
   // Toggle native macOS vibrancy to match the chosen theme.
   if (mainWindow && !mainWindow.isDestroyed()) {
