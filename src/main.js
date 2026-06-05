@@ -42,6 +42,12 @@ const {
 
 const APP_ID = 'mx.teiker.broadcast'
 
+// Debe ir antes de whenReady. La 2ª instancia no debe registrar atajos ni IPC de arranque.
+const gotSingleInstanceLock = app.requestSingleInstanceLock()
+if (!gotSingleInstanceLock) {
+  app.quit()
+}
+
 function shortcutLabels() {
   const mod = process.platform === 'darwin' ? '⌘' : 'Ctrl+'
   return { toggle: `${mod}⇧T`, ackFirst: `${mod}⇧A`, goalInc: `${mod}⇧G` }
@@ -1088,16 +1094,31 @@ function notifyMessage(m, { isRetry = false } = {}) {
 }
 
 function registerGlobalShortcuts() {
-  globalShortcut.unregister('CommandOrControl+Shift+T')
-  globalShortcut.unregister('CommandOrControl+Shift+A')
-  globalShortcut.unregister('CommandOrControl+Shift+G')
-  globalShortcut.register('CommandOrControl+Shift+T', () => toggleWindow())
-  globalShortcut.register('CommandOrControl+Shift+A', () => {
-    if (!ackFirstPending()) toggleWindow()
-  })
-  globalShortcut.register('CommandOrControl+Shift+G', () => {
-    incrementFirstGoal().catch(console.error)
-  })
+  if (!app.isReady()) return
+  try {
+    const accels = [
+      'CommandOrControl+Shift+T',
+      'CommandOrControl+Shift+A',
+      'CommandOrControl+Shift+G',
+    ]
+    for (const accel of accels) {
+      try {
+        globalShortcut.unregister(accel)
+      } catch {}
+    }
+    globalShortcut.register('CommandOrControl+Shift+T', () => toggleWindow())
+    globalShortcut.register('CommandOrControl+Shift+A', () => {
+      if (!ackFirstPending()) toggleWindow()
+    })
+    globalShortcut.register('CommandOrControl+Shift+G', () => {
+      incrementFirstGoal().catch(console.error)
+    })
+  } catch (err) {
+    console.error('Atajos globales no disponibles:', err)
+    setTimeout(() => {
+      if (app.isReady()) registerGlobalShortcuts()
+    }, 800)
+  }
 }
 
 function checkForAppUpdates() {
@@ -1370,63 +1391,62 @@ ipcMain.handle('theme:set', (_evt, theme) => {
 
 // ---------- App lifecycle ----------
 
-app.whenReady().then(() => {
-  if (process.platform === 'win32') {
-    // Necesario para que las notificaciones del sistema funcionen en Windows 10+.
-    app.setAppUserModelId(APP_ID)
-  }
-  if (process.platform === 'darwin') app.dock?.hide()
-
-  const loginBoot = wasStartedAtLogin()
-  ensureLaunchAtLogin()
-
-  setupTray()
-  registerGlobalShortcuts()
-  setupAutoUpdater()
-
-  powerMonitor.on('resume', () => {
-    syncAll({ force: true }).catch(console.error)
-    scheduleNextPoll()
-    checkForAppUpdates()
-  })
-  powerMonitor.on('suspend', () => {
-    if (pollTimer) clearTimeout(pollTimer)
-    pollTimer = null
-  })
-
-  const user = store.get('user')
-  if (!user?.id) {
-    // Primera vez: mostrar setup aunque arranque con el sistema.
-    createSetupWindow()
-  } else {
-    ensureClientToken()
-      .then(() => {
-        startPolling()
-        // Al encender el Mac: pastilla visible, sin robar foco del usuario.
-        createMainWindow({ focus: !loginBoot, show: true })
-        if (loginBoot) {
-          syncAll({ force: true }).catch(console.error)
-        }
-      })
-      .catch(console.error)
-  }
-})
-
-app.on('will-quit', () => {
-  globalShortcut.unregisterAll()
-  cancelAutoPeek()
-  if (pollTimer) clearTimeout(pollTimer)
-})
-
-app.on('window-all-closed', (e) => {
-  // Stay alive in tray.
-  e.preventDefault?.()
-})
-
-// Ensure single instance.
-const gotLock = app.requestSingleInstanceLock()
-if (!gotLock) {
-  app.quit()
-} else {
+if (gotSingleInstanceLock) {
   app.on('second-instance', () => createMainWindow())
+
+  app.whenReady().then(() => {
+    if (process.platform === 'win32') {
+      // Necesario para que las notificaciones del sistema funcionen en Windows 10+.
+      app.setAppUserModelId(APP_ID)
+    }
+    if (process.platform === 'darwin') app.dock?.hide()
+
+    const loginBoot = wasStartedAtLogin()
+    ensureLaunchAtLogin()
+
+    setupTray()
+    registerGlobalShortcuts()
+    setupAutoUpdater()
+
+    powerMonitor.on('resume', () => {
+      syncAll({ force: true }).catch(console.error)
+      scheduleNextPoll()
+      checkForAppUpdates()
+    })
+    powerMonitor.on('suspend', () => {
+      if (pollTimer) clearTimeout(pollTimer)
+      pollTimer = null
+    })
+
+    const user = store.get('user')
+    if (!user?.id) {
+      // Primera vez: mostrar setup aunque arranque con el sistema.
+      createSetupWindow()
+    } else {
+      ensureClientToken()
+        .then(() => {
+          startPolling()
+          createMainWindow({ focus: !loginBoot, show: true })
+          if (loginBoot) {
+            syncAll({ force: true }).catch(console.error)
+          }
+        })
+        .catch(console.error)
+    }
+  })
+
+  app.on('will-quit', () => {
+    if (app.isReady()) {
+      try {
+        globalShortcut.unregisterAll()
+      } catch {}
+    }
+    cancelAutoPeek()
+    if (pollTimer) clearTimeout(pollTimer)
+  })
+
+  app.on('window-all-closed', (e) => {
+    // Stay alive in tray.
+    e.preventDefault?.()
+  })
 }
