@@ -1,6 +1,6 @@
 {
   "name": "teiker-broadcast",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "description": "Teiker Broadcast — desktop tray client",
   "main": "src/main.js",
   "repository": {
